@@ -1,6 +1,7 @@
 require("dotenv").config();
 const maps = require("azure-maps-rest");
 
+
 /**
  * 
  * Given a route, extracts the MultiLineString that represents the actual
