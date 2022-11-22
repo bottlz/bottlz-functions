@@ -4,8 +4,8 @@ const maps = require("azure-maps-rest");
 
 /**
  * 
- * Given a route, extracts the MultiLineString that represents the actual
- * route itself. 
+ * Given a route represented as a GeoJSON FeatureCollection, extracts the array
+ * of coordinates storing the route itself. 
  * @param {FeatureCollection} route 
  * @returns Value stored at route.features[0].geometry.coordinates[0]
  */
@@ -14,7 +14,17 @@ function extractRoute(route) {
 }
 
 /**
- * 
+ * Given a route represented as a GeoJSON FeatureCollection, extracts its 
+ * length in meters.
+ * @param {FeatureCollection} route 
+ * @returns 
+ */
+function extractRouteLength(route) {
+    return route.features[0].properties.summary.lengthInMeters;
+}
+
+/**
+ * Generates a route between startPoint and endPoint.
  * @param {GeoJSON.geometry} startPoint  
  * @param {GeoJSON.geometry} endPoint 
  * @param {RouteURL} routeURL 
@@ -26,9 +36,39 @@ async function getRoute(startPoint, endPoint, routeURL) {
     var coordinates = [startPoint.coordinates, endPoint.coordinates];
 
     //TODO: add better error handling when route can't be generated
-    return await routeURL.calculateRouteDirections(maps.Aborter.none, coordinates).then((directions) => {
+    return await routeURL.calculateRouteDirections(maps.Aborter.timeout(10000), coordinates).then((directions) => {
         var route = directions.geojson.getFeatures();
-        return extractRoute(route);
+        return { "distance": extractRouteLength(route), "route": extractRoute(route) };
+    });
+}
+
+/**
+ * 
+ * @returns Random number between -0.01 and 0.01
+ */
+function offset() {
+    var offset = Math.random();
+    offset *= Math.round(Math.random()) ? 1 : -1;
+    offset /= 100;
+    return offset;
+}
+
+/**
+ * Returns a random point within a 500 mile radius of the given origin.
+ * @param {Coordinate array} origin
+ * @param {SearchURL} searchURL 
+ */
+async function getRandomEndpoint(origin, searchURL) {
+    var lon = origin.coordinates[0] + offset();
+    var lat = origin.coordinates[1] + offset();
+    var radius = 500; // radius in meters to search in
+
+    return await searchURL.searchNearby(maps.Aborter.timeout(10000), [lon, lat], {
+        limit: 1,
+        radius: radius
+    }).then((results) => {
+        var data = results.geojson.getFeatures();
+        return data.features[0].geometry;
     });
 }
 
@@ -52,29 +92,19 @@ module.exports = async function (context, req) {
 
     var pipeline = maps.MapsURL.newPipeline(new maps.SubscriptionKeyCredential(process.env.MAPS_SUB_KEY));
     var routeURL = new maps.RouteURL(pipeline);
+    var searchURL = new maps.SearchURL(pipeline);
 
     var newEndpt;
     if (routes.length == 0) {
         // No routes have been generated yet, generate two starting at origin
-        // TODO: pick actual endpoints
-        var endpt1 = {
-            "type": "Point",
-            "coordinates": [-76.49976358014023, 42.445119924722725,]
-        };
+        var endpt1 = await getRandomEndpoint(origin, searchURL);
         var route1 = await getRoute(origin, endpt1, routeURL);
-        console.log(route1);
-        newEndpt = {
-            "type": "Point",
-            "coordinates": [-76.4873610457749, 42.44188967828053]
-        };
+        newEndpt = await getRandomEndpoint(origin, searchURL);
         var route2 = await getRoute(endpt1, newEndpt, routeURL);
         routes.push(route1, route2);
     } else {
         // Only generate one new route
-        newEndpt = {
-            "type": "Point",
-            "coordinates": [-76.49976358014023, 42.445119924722725]
-        };
+        newEndpt = await getRandomEndpoint(origin, searchURL);
         var route1 = await getRoute(endpoint, newEndpt, routeURL);
         routes.push(route1);
     }
