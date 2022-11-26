@@ -5,7 +5,9 @@
   "scripts": {
     "start": "func start",
     "format": "prettier '**/*.{js,scss,css,html,md}' --write",
-    "format:check": "prettier '**/*.{js,scss,css,html,md}' --check"
+    "format:check": "prettier '**/*.{js,scss,css,html,md}' --check",
+    "lint": "eslint ./route-function --fix --ext .js",
+    "lint:check": "eslint . --ext .js"
   },
   "dependencies": {
     "azure-maps-control": "^2.2.0",
@@ -14,6 +16,8 @@
     "geojson": "^0.5.0"
   },
   "devDependencies": {
+    "eslint": "^8.28.0",
+    "eslint-config-prettier": "^8.5.0",
     "prettier": "^2.8.0"
   }
 }

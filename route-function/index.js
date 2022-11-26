@@ -32,13 +32,13 @@ function extractRouteLength(route) {
  */
 async function getRoute(startPoint, endPoint, routeURL) {
   //calculateRouteDirections expects coordinates in the order [longitude, latitude]
-  let coordinates = [startPoint.coordinates, endPoint.coordinates];
+  const coordinates = [startPoint.coordinates, endPoint.coordinates];
 
   //TODO: add better error handling when route can't be generated
   return await routeURL
     .calculateRouteDirections(maps.Aborter.timeout(10000), coordinates)
     .then((directions) => {
-      let route = directions.geojson.getFeatures();
+      const route = directions.geojson.getFeatures();
       return {
         distance: extractRouteLength(route),
         route: extractRoute(route),
@@ -63,9 +63,9 @@ function offset() {
  * @param {SearchURL} searchURL
  */
 async function getRandomEndpoint(origin, searchURL) {
-  let lon = origin.coordinates[0] + offset();
-  let lat = origin.coordinates[1] + offset();
-  let radius = 500; // radius in meters to search in
+  const lon = origin.coordinates[0] + offset();
+  const lat = origin.coordinates[1] + offset();
+  const radius = 500; // radius in meters to search in
 
   return await searchURL
     .searchNearby(maps.Aborter.timeout(10000), [lon, lat], {
@@ -73,7 +73,7 @@ async function getRandomEndpoint(origin, searchURL) {
       radius: radius,
     })
     .then((results) => {
-      let data = results.geojson.getFeatures();
+      const data = results.geojson.getFeatures();
       return data.features[0].geometry;
     });
 }
@@ -85,7 +85,7 @@ module.exports = async function (context, req) {
   const created = req.body && req.body.created;
   const origin = req.body && req.body.origin;
   const endpoint = req.body && req.body.endpoint;
-  let routes = req.body && req.body.routes;
+  const routes = req.body && req.body.routes;
 
   if (!bottleId || !origin || !endpoint || !created || !routes) {
     context.res = {
@@ -98,22 +98,22 @@ module.exports = async function (context, req) {
   }
 
   try {
-    let pipeline = maps.MapsURL.newPipeline(
+    const pipeline = maps.MapsURL.newPipeline(
       new maps.SubscriptionKeyCredential(process.env.MAPS_SUB_KEY)
     );
-    let routeURL = new maps.RouteURL(pipeline);
-    let searchURL = new maps.SearchURL(pipeline);
+    const routeURL = new maps.RouteURL(pipeline);
+    const searchURL = new maps.SearchURL(pipeline);
 
     const newEndpoint = await getRandomEndpoint(origin, searchURL);
     if (routes.length == 0) {
       // No routes have been generated yet, generate two starting at origin
-      let firstEndpoint = await getRandomEndpoint(origin, searchURL);
-      let route1 = await getRoute(origin, firstEndpoint, routeURL);
-      let route2 = await getRoute(firstEndpoint, newEndpoint, routeURL);
+      const firstEndpoint = await getRandomEndpoint(origin, searchURL);
+      const route1 = await getRoute(origin, firstEndpoint, routeURL);
+      const route2 = await getRoute(firstEndpoint, newEndpoint, routeURL);
       routes.push(route1, route2);
     } else {
       // Only generate one new route
-      let route = await getRoute(endpoint, newEndpoint, routeURL);
+      const route = await getRoute(endpoint, newEndpoint, routeURL);
       routes.push(route);
     }
 
