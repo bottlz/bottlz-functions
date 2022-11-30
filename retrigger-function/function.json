@@ -1,0 +1,11 @@
+{
+  "bindings": [
+    {
+      "name": "mySbMsg",
+      "type": "serviceBusTrigger",
+      "direction": "in",
+      "queueName": "route-function-queue",
+      "connection": "bottlzbus_SERVICEBUS"
+    }
+  ]
+}
