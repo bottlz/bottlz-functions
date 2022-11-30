@@ -1,5 +1,6 @@
 require("dotenv").config();
 const maps = require("azure-maps-rest");
+const { delay, ServiceBusClient } = require("@azure/service-bus");
 
 /**
  *
@@ -104,16 +105,19 @@ module.exports = async function (context, req) {
     const routeURL = new maps.RouteURL(pipeline);
     const searchURL = new maps.SearchURL(pipeline);
 
+    var retriggerTime;
     const newEndpoint = await getRandomEndpoint(origin, searchURL);
     if (routes.length == 0) {
       // No routes have been generated yet, generate two starting at origin
       const firstEndpoint = await getRandomEndpoint(origin, searchURL);
       const route1 = await getRoute(origin, firstEndpoint, routeURL);
+      retriggerTime = route1.distance * 1000;
       const route2 = await getRoute(firstEndpoint, newEndpoint, routeURL);
       routes.push(route1, route2);
     } else {
       // Only generate one new route
       const route = await getRoute(endpoint, newEndpoint, routeURL);
+      retriggerTime = routes[routes.length - 1].distance * 1000;
       routes.push(route);
     }
 
@@ -124,6 +128,14 @@ module.exports = async function (context, req) {
       endpoint: newEndpoint,
       routes,
     };
+
+    const connectionString = process.env.bottlzbus_SERVICEBUS;
+    const queueName = "route-function-queue";
+    const sbClient = new ServiceBusClient(connectionString);
+    const sender = sbClient.createSender(queueName);
+    const message = { body: bottleData };
+    const scheduledEnqueueTimeUtc = new Date(Date.now() + retriggerTime); //delay in milliseconds 
+    await sender.scheduleMessages(message, scheduledEnqueueTimeUtc);
 
     context.bindings.outputDocument = JSON.stringify(bottleData);
 
