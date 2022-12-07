@@ -105,7 +105,7 @@ module.exports = async function (context, req) {
     const routeURL = new maps.RouteURL(pipeline);
     const searchURL = new maps.SearchURL(pipeline);
 
-    var retriggerTime;
+    let retriggerTime;
     const newEndpoint = await getRandomEndpoint(origin, searchURL);
     if (routes.length == 0) {
       // No routes have been generated yet, generate two starting at origin
@@ -130,12 +130,20 @@ module.exports = async function (context, req) {
     };
 
     const connectionString = process.env.bottlzbus_SERVICEBUS;
-    const queueName = "route-function-queue";
+    const queueName = "retrigger-queue";
     const sbClient = new ServiceBusClient(connectionString);
     const sender = sbClient.createSender(queueName);
-    const message = { body: bottleData };
-    const scheduledEnqueueTimeUtc = new Date(Date.now() + retriggerTime); //delay in milliseconds 
+    const message = { body: JSON.stringify(bottleData) };
+    const scheduledEnqueueTimeUtc = new Date(Date.now() + retriggerTime); //delay in milliseconds
     await sender.scheduleMessages(message, scheduledEnqueueTimeUtc);
+
+    context.log(
+      "Scheduled retrigger for bottle id " +
+        bottleId +
+        " in " +
+        retriggerTime / 1000 +
+        " seconds."
+    );
 
     context.bindings.outputDocument = JSON.stringify(bottleData);
 
