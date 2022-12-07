@@ -23,6 +23,13 @@
       "collectionName": "bottles-container1",
       "createIfNotExists": false,
       "connectionStringSetting": "CosmosDbConnectionString"
+    },
+    {
+      "type": "webPubSub",
+      "direction": "out",
+      "name": "actions",
+      "hub": "bottlzHub",
+      "connection": "WebPubSubConnectionString"
     }
   ]
 }
