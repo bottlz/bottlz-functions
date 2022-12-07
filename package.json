@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@azure/service-bus": "^7.7.3",
+    "axios": "^1.2.1",
     "azure-maps-control": "^2.2.0",
     "azure-maps-rest": "^2.1.0",
     "dotenv": "^16.0.3",

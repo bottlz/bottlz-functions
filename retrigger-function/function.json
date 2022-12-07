@@ -4,8 +4,9 @@
       "name": "mySbMsg",
       "type": "serviceBusTrigger",
       "direction": "in",
-      "queueName": "route-function-queue",
+      "queueName": "retrigger-queue",
       "connection": "bottlzbus_SERVICEBUS"
     }
-  ]
+  ],
+  "disabled": false
 }
