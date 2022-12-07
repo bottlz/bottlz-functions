@@ -145,12 +145,20 @@ module.exports = async function (context, req) {
         " seconds."
     );
 
-    context.bindings.outputDocument = JSON.stringify(bottleData);
+    const jsonBottleData = JSON.stringify(bottleData);
+    context.bindings.outputDocument = jsonBottleData;
+    context.bindings.actions = {
+      actionName: "sendToAll",
+      data: jsonBottleData,
+      dataType: "json",
+    };
 
     context.res = {
       status: 200,
       body: bottleData,
     };
+
+    // context.done();
   } catch (err) {
     context.res = {
       status: 500,
