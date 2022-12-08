@@ -1,6 +1,7 @@
 require("dotenv").config();
 const maps = require("azure-maps-rest");
-const { delay, ServiceBusClient } = require("@azure/service-bus");
+const { ServiceBusClient } = require("@azure/service-bus");
+const { CosmosClient } = require("@azure/cosmos");
 
 /**
  *
@@ -79,6 +80,33 @@ async function getRandomEndpoint(origin, searchURL) {
     });
 }
 
+/**
+ * Returns true if bottle with id bottleId is in bottles database container-1, 
+ * and false otherwise.
+ * @param {string} bottleId 
+ * @returns 
+ */
+async function checkDbForBottle(bottleId) {
+  const cosmosClient = new CosmosClient(process.env.CosmosDbConnectionString); //({ dbEndpoint, key });
+  const databaseName = `bottles`;
+  const containerName = `bottles-container1`;
+  const database = cosmosClient.database(databaseName);
+  const container = database.container(containerName);
+
+  const querySpec = {
+    query: "select * from c where c.id=@bottleId",
+    parameters: [
+      {
+        name: "@bottleId",
+        value: bottleId
+      }
+    ]
+  };
+
+  const { resources } = await container.items.query(querySpec).fetchAll();
+  return (resources.length != 0);
+}
+
 module.exports = async function (context, req) {
   context.log("JavaScript HTTP trigger function processed a request.");
 
@@ -94,6 +122,16 @@ module.exports = async function (context, req) {
       body: {
         error: "Missing required inputs to route function.",
       },
+    };
+    return;
+  }
+
+  //if bottleId is not in DB, terminate
+  const bottleInDb = await checkDbForBottle(bottleId);
+  if (!bottleInDb) {
+    context.res = {
+      status: 200,
+      body: "Bottle is not in database. Terminating route function.",
     };
     return;
   }
@@ -139,10 +177,10 @@ module.exports = async function (context, req) {
 
     context.log(
       "Scheduled retrigger for bottle id " +
-        bottleId +
-        " in " +
-        retriggerTime / 1000 +
-        " seconds."
+      bottleId +
+      " in " +
+      retriggerTime / 1000 +
+      " seconds."
     );
 
     const jsonBottleData = JSON.stringify(bottleData);
@@ -157,8 +195,6 @@ module.exports = async function (context, req) {
       status: 200,
       body: bottleData,
     };
-
-    // context.done();
   } catch (err) {
     context.res = {
       status: 500,
